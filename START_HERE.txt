@@ -1,0 +1,34 @@
+CIVICALERT — QUICK START (Windows PowerShell)
+==========================================
+
+1. Extract this ZIP to any folder, preferably not inside OneDrive.
+2. Install Node.js 22 LTS and start MongoDB locally, or obtain an Atlas connection string.
+   Optional: if Docker Desktop is installed, run: docker compose up -d
+3. Open the unzipped CivicAlert-MERN folder in VS Code.
+4. Run: npm install
+5. Copy these files using PowerShell:
+   Copy-Item server/.env.example server/.env
+   Copy-Item client/.env.example client/.env
+   Copy-Item admin/.env.example admin/.env
+6. Edit server/.env: configure MONGODB_URI and a NEW 32+ character JWT_SECRET.
+7. Create a Google Cloud OAuth Web Client, allow http://localhost:5173 as JS origin.
+   Place the same client ID in client/.env and server/.env.
+8. Create an ImageKit account and put the private API key ONLY in server/.env.
+9. Create main admin once:
+   $env:MAIN_ADMIN_USERNAME="civicalertroot"
+   $env:MAIN_ADMIN_PASSWORD="your-unique-14-plus-character-password"
+   npm run seed:admin
+   Remove-Item Env:MAIN_ADMIN_USERNAME
+   Remove-Item Env:MAIN_ADMIN_PASSWORD
+10. Run: npm run dev
+    Citizen: http://localhost:5173
+    Admin:   http://localhost:5174
+    API:     http://localhost:4000/api/health
+11. Run: npm test
+
+Gemini, SMTP, Telegram and browser push are OPTIONAL integrations, but each requires
+its own configured provider credentials to work. If Gemini is not configured,
+new reports still publish Unverified with an AI-warning status.
+
+DO NOT upload .env files or real credentials to GitHub.
+Read README.md for complete setup, API reference, limits, and safety notes.

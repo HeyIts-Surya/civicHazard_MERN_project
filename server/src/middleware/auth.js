@@ -1,0 +1,9 @@
+import jwt from 'jsonwebtoken';
+import {User,Admin} from '../models/index.js';
+export const cookieOptions=()=>({httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:7*24*60*60*1000});
+export function issueSession(res,kind,id){const token=jwt.sign({kind,id:id.toString()},process.env.JWT_SECRET,{expiresIn:kind==='admin'?'12h':'7d'});res.cookie(kind==='admin'?'admin_session':'citizen_session',token,{...cookieOptions(),maxAge:kind==='admin'?12*3600000:7*86400000});}
+export function clearSession(res,kind){res.clearCookie(kind==='admin'?'admin_session':'citizen_session',{...cookieOptions(),maxAge:undefined});}
+export async function citizen(req,res,next){try{const token=req.cookies.citizen_session;if(!token)return res.status(401).json({error:'Google sign-in required'});const p=jwt.verify(token,process.env.JWT_SECRET);if(p.kind!=='citizen')throw Error('Invalid role');const u=await User.findById(p.id);if(!u||u.suspended)return res.status(403).json({error:'Account unavailable'});req.user=u;next();}catch{res.status(401).json({error:'Session expired; sign in again'});}}
+export async function admin(req,res,next){try{const token=req.cookies.admin_session;if(!token)return res.status(401).json({error:'Administrator sign-in required'});const p=jwt.verify(token,process.env.JWT_SECRET);if(p.kind!=='admin')throw Error('Invalid role');const a=await Admin.findById(p.id);if(!a||a.disabled)return res.status(403).json({error:'Admin account disabled'});req.admin=a;next();}catch{res.status(401).json({error:'Administrator session expired'});}}
+export function requireMain(req,res,next){if(req.admin?.role!=='main')return res.status(403).json({error:'Main administrator only'});next();}
+export function requirePermission(name){return(req,res,next)=>{if(req.admin?.role==='main'||req.admin?.permissions?.includes(name))return next();res.status(403).json({error:'Permission denied: '+name});};}

@@ -1,0 +1,12 @@
+# OPTIONAL: free local MongoDB for development (requires Docker Desktop).
+# The port is bound only to this computer's loopback interface.
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - civic-mongo-data:/data/db
+volumes:
+  civic-mongo-data:

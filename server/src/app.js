@@ -1,0 +1,25 @@
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import authRoutes from './routes/auth.js';
+import incidentRoutes from './routes/incidents.js';
+import noticeRoutes from './routes/notifications.js';
+import adminRoutes from './routes/admin.js';
+const app=express();app.disable('x-powered-by');app.set('trust proxy',process.env.NODE_ENV==='production'?1:false);
+const allowedOrigins=[process.env.CITIZEN_ORIGIN||'http://localhost:5173',process.env.ADMIN_ORIGIN||'http://localhost:5174'];
+app.use(helmet());app.use(cors({origin(origin,cb){if(!origin||allowedOrigins.includes(origin))return cb(null,true);cb(new Error('Origin not allowed'));},credentials:true}));
+app.use(morgan('dev'));app.use(express.json({limit:'128kb'}));app.use(cookieParser());
+// Cookie-based mutations require a trusted Origin, in addition to SameSite cookies.
+app.use((req,res,next)=>{if(['POST','PUT','PATCH','DELETE'].includes(req.method)){const origin=req.get('Origin');if(origin&&!allowedOrigins.includes(origin))return res.status(403).json({error:'Untrusted request origin'});}next();});
+const strictLimit=rateLimit({windowMs:15*60*1000,limit:20,standardHeaders:'draft-7',legacyHeaders:false});
+const standardLimit=rateLimit({windowMs:15*60*1000,limit:120,standardHeaders:'draft-7',legacyHeaders:false});
+app.get('/api/health',(_req,res)=>res.json({ok:true,service:'CivicAlert API',time:new Date().toISOString()}));
+app.use('/api/auth/google',strictLimit);app.use('/api/admin/login',strictLimit);
+app.use('/api',standardLimit);
+app.use('/api/auth',authRoutes);app.use('/api/incidents',incidentRoutes);app.use('/api/notifications',noticeRoutes);app.use('/api/admin',adminRoutes);
+app.use((_req,res)=>res.status(404).json({error:'API route not found'}));
+app.use((err,_req,res,_next)=>{console.error(err);if(err.code==='LIMIT_FILE_SIZE')return res.status(413).json({error:'Image must be 6 MB or smaller'});if(err.code===11000)return res.status(409).json({error:'Record already exists'});res.status(err.status||500).json({error:err.status?err.message:'Internal server error'});});
+export {app,allowedOrigins};

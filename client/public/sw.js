@@ -1,0 +1,2 @@
+self.addEventListener('push',event=>{let payload={title:'CivicAlert',body:'New nearby report',url:'/notifications'};try{payload={...payload,...event.data.json()};}catch{}event.waitUntil(self.registration.showNotification(payload.title,{body:payload.body,icon:'/favicon.svg',data:{url:payload.url}}));});
+self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(clients.openWindow(event.notification.data?.url||'/notifications'));});
